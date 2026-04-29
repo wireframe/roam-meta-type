@@ -282,7 +282,7 @@ Replace the JSON-blob `input` with a Blueprint-based React UI that lets users ad
   - Import `SettingsPanel` from `./settings-panel.js`.
   - Verify: `npm run build` succeeds.
 
-- [ ] **Task 4.7: Manual verification in Roam.**
+- [x] **Task 4.7: Manual verification in Roam.**
   - Build, reload Roam (`control-d control-r`).
   - Open Settings → Meta Type tab — confirm the React table renders.
   - Add a row: type "Recipe", color (pick HSL values like h=10, s=70), fields "Cuisine, Time".
@@ -290,12 +290,12 @@ Replace the JSON-blob `input` with a Blueprint-based React UI that lets users ad
   - Edit the row, save, re-verify. Remove the row, save, re-verify chip disappears.
   - Confirm in DevTools that `window.React` is what the component is using (not a bundled copy).
 
-- [ ] **Task 4.8: Mobile/remote verification (optional but recommended).**
+- [x] **Task 4.8: Mobile/remote verification (optional but recommended).** (Skipped — desktop verification sufficient)
   - Run `npx serve` in the repo root → note the local URL (e.g., `http://192.168.x.y:3000`).
   - In Roam (mobile or another device): Settings → Roam Depot → Developer Extensions → Load remote → paste the URL.
   - Confirm extension loads and the settings UI works.
 
-- [ ] **Task 4.9: Commit Phase 4.**
+- [x] **Task 4.9: Commit Phase 4.**
   - Stage all of Phase 4's files plus `package.json` / `package-lock.json`.
   - Commit message: `Add multi-type settings UI with BlueprintJS and esbuild build`
 
@@ -308,12 +308,12 @@ Gated on a go/no-go after Phases 1–4. If go: add the manifest entry to a fork 
 
 ### Tasks
 
-- [ ] **Task 5.1: Decide built-artifact-in-repo vs `build.sh` at depot CI.**
+- [x] **Task 5.1: Decide built-artifact-in-repo vs `build.sh` at depot CI.** (Chose build.sh)
   - Decision criteria: if the build is fast (< 10s) and self-contained (only needs `npm ci && npm run build`), prefer **`build.sh` at depot CI** — keeps the repo clean of build artifacts. zoteroRoam-style "commit the bundle" is only worth it if the build is slow or has secrets.
   - Recommendation: use `build.sh`, do not commit `extension.js` to git. Update `.gitignore` accordingly (already done in Phase 1).
   - Document the decision inline as a comment at the top of `build.sh`.
 
-- [ ] **Task 5.2: Create `build.sh`.**
+- [x] **Task 5.2: Create `build.sh`.**
   - File: `build.sh` (new, in repo root)
   - Contents:
     ```sh
@@ -325,15 +325,15 @@ Gated on a go/no-go after Phases 1–4. If go: add the manifest entry to a fork 
   - `chmod +x build.sh`
   - Verify: `bash build.sh` produces `extension.js` from a clean state.
 
-- [ ] **Task 5.3: Add a `LICENSE` file if missing.** (Already MIT per `package.json`; ensure `LICENSE` file exists in repo root.)
+- [x] **Task 5.3: Add a `LICENSE` file if missing.** (Already present)
 
-- [ ] **Task 5.4: Update `README.md` for the end-user audience.**
+- [x] **Task 5.4: Update `README.md` for the end-user audience.**
   - File: `README.md`
   - Replace any "paste this into a `roam/js` block" instructions with "install via Roam Depot" once submitted.
   - Document the settings panel: how to add types, format of color/fields.
   - Note that the extension uses `Type:: [[TypeName]]` blocks and `Field:: value` blocks on each typed page.
 
-- [ ] **Task 5.5: Add `CHANGELOG.md`.**
+- [x] **Task 5.5: Add `CHANGELOG.md`.**
   - File: `CHANGELOG.md` (new)
   - Initial entry covering the conversion to a Depot plugin.
 

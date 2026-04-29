@@ -18,25 +18,28 @@ Roam's freedom as an outline is the whole point. But the people, projects, books
 4. Sidepanel reactively refreshes to updates **live**: edit `Priority::` directly in the page body, the panel updates without a re-render.
 5. **Configurable** types, fields, and accent colors via the Roam settings panel (no source edits required).
 
-## Install (developer mode)
+## Install
 
-This extension is being prepared for the Roam Depot. Until it's published, install it as a local Developer Extension:
+### From the Roam Depot
 
-1. Clone this repo locally:
+In Roam: **Settings → Roam Depot → Browse → Meta Type → Install**. (Available once the Depot PR is merged.)
+
+### As a local developer extension
+
+For early testing or development:
+
+1. Clone and build:
    ```bash
    git clone https://github.com/wireframe/roam-meta-type.git
    cd roam-meta-type
    npm install
    npm run build
    ```
-   This produces `extension.js` at the repo root.
-2. In Roam: Settings → **Roam Depot** → **Installed Extensions** → gear icon → enable **Developer mode**.
-3. A **Developer Extensions** section appears with a folder-plus icon. Click it and choose this repo's folder.
-4. The extension loads. Open any page with a `Type::` attribute and you should see a chip appear.
+2. In Roam: **Settings → Roam Depot → Installed Extensions** → gear icon → enable **Developer mode**.
+3. A **Developer Extensions** section appears. Click the folder-plus icon and choose this repo's folder.
+4. The extension loads. Open any page with a `Type::` attribute and a chip appears.
 
-To reload after editing source: rebuild (`npm run build`), then in Roam press **`control-d control-r`**. Roam unloads the extension, reads the new `extension.js`, and reloads.
-
-To uninstall, remove it from the Developer Extensions list in Roam settings.
+Reload after editing source: rebuild (`npm run build`), then press **`control-d control-r`** in Roam.
 
 ## Configuring types
 
