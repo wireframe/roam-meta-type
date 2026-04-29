@@ -57,18 +57,7 @@ export function renderRoamMarkdown(text) {
   return html;
 }
 
-const TYPE_ACCENTS = {
-  Organization: { h: 217, s: 60 },
-  Person:       { h: 32,  s: 70 },
-  Project:      { h: 158, s: 50 },
-  Blog:         { h: 262, s: 55 },
-  document:     { h: 215, s: 14 },
-  article:      { h: 350, s: 60 },
-  book:         { h: 199, s: 60 },
-};
-
-export function chipHtml(typeName) {
-  const accent = TYPE_ACCENTS[typeName];
+export function chipHtml(typeName, accent) {
   const styleAttr = accent
     ? ` style="--chip-h:${accent.h};--chip-s:${accent.s}%"`
     : "";

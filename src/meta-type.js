@@ -1,28 +1,5 @@
-const TYPE_CONFIG = {
-  "Organization": {
-    fields: ["Website", "Phone", "Address"]
-  },
-  "Person": {
-    fields: ["Email", "Phone", "Organization", "Role", "Location", "LinkedIn"]
-  },
-  "Project": {
-    fields: ["Status", "Priority", "Due", "Topics"]
-  },
-  "Blog": {
-    fields: ["Source"]
-  },
-  "document": {
-    fields: ["Author", "Source", "Topics"]
-  },
-  "article": {
-    fields: ["Author", "Source", "Topics"]
-  },
-  "book": {
-    fields: ["Author", "Source", "Topics"]
-  }
-};
-
 const STYLE_ID = "roam-meta-type-styles";
+const FLASH_STYLE_ID = "roam-meta-type-flash-styles";
 const CHIP_CLASS = "meta-type-chip";
 const PANEL_CLASS = "meta-type-panel";
 const SIDEBAR_CONTENT_SELECTOR = "#roam-right-sidebar-content";
@@ -47,6 +24,8 @@ function onload({ extensionAPI }) {
   // Cleanups run LIFO at unload: stopObserving fires first, removeStyles last.
   injectStyles();
   teardown.register(removeStyles);
+  injectFlashStyle();
+  teardown.register(removeFlashStyle);
   teardown.register(installChipDelegation());
   teardown.register(installEditExitHandlers());
   teardown.register(cleanup);
@@ -222,11 +201,6 @@ function injectStyles() {
     .meta-type-flash {
       animation: meta-type-flash-pulse 600ms ease-out;
     }
-    @keyframes meta-type-flash-pulse {
-      0%   { box-shadow: 0 0 0 0 rgba(16, 107, 163, 0.4); }
-      50%  { box-shadow: 0 0 0 6px rgba(16, 107, 163, 0.0); }
-      100% { box-shadow: 0 0 0 0 rgba(16, 107, 163, 0.0); }
-    }
     .meta-type-field[data-editing="true"] .meta-type-field-label {
       display: none;
     }
@@ -272,6 +246,26 @@ function injectStyles() {
 
 function removeStyles() {
   const style = document.getElementById(STYLE_ID);
+  if (style) style.remove();
+}
+
+function injectFlashStyle() {
+  if (document.getElementById(FLASH_STYLE_ID)) return;
+  const { r, g, b } = getConfig().flashColor;
+  const style = document.createElement("style");
+  style.id = FLASH_STYLE_ID;
+  style.textContent = `
+    @keyframes meta-type-flash-pulse {
+      0%   { box-shadow: 0 0 0 0 rgba(${r}, ${g}, ${b}, 0.4); }
+      50%  { box-shadow: 0 0 0 6px rgba(${r}, ${g}, ${b}, 0.0); }
+      100% { box-shadow: 0 0 0 0 rgba(${r}, ${g}, ${b}, 0.0); }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+function removeFlashStyle() {
+  const style = document.getElementById(FLASH_STYLE_ID);
   if (style) style.remove();
 }
 
@@ -354,7 +348,8 @@ async function onChipClick(pageUid, typeName) {
     console.warn("[meta-type] onChipClick called without pageUid; ignoring");
     return;
   }
-  if (!TYPE_CONFIG[typeName]) {
+  const type = getTypeByName(typeName);
+  if (!type) {
     console.warn(`[meta-type] unknown type: ${typeName}`);
     return;
   }
@@ -370,7 +365,7 @@ async function onChipClick(pageUid, typeName) {
   if (openingPanels.has(key)) return;
   openingPanels.add(key);
   try {
-    const fields = TYPE_CONFIG[typeName].fields;
+    const fields = type.fields;
     const fieldData = await readAllFields(pageUid, fields);
 
     const panelEl = renderPanel(pageUid, typeName, fieldData);
@@ -403,7 +398,9 @@ async function onChipClick(pageUid, typeName) {
 }
 
 function renderPanel(pageUid, typeName, fieldData) {
-  const fields = TYPE_CONFIG[typeName].fields;
+  // Caller (onChipClick) has already validated the type exists, so `type` is non-null.
+  const type = getTypeByName(typeName);
+  const fields = type.fields;
   const rowsHtml = fields
     .map(name => fieldRowHtml({
       label: name,
@@ -419,7 +416,7 @@ function renderPanel(pageUid, typeName, fieldData) {
   panel.setAttribute("data-type", typeName);
   panel.innerHTML = `
     <div class="meta-type-panel-header">
-      ${chipHtml(typeName)}
+      ${chipHtml(typeName, type.color)}
       <button class="meta-type-panel-close" aria-label="Close">✕</button>
     </div>
     <div class="meta-type-panel-body">${rowsHtml}</div>
@@ -597,7 +594,7 @@ async function exitEditMode(rowEl) {
 
   const pageUid = panelEl.getAttribute("data-page-uid");
   const typeName = panelEl.getAttribute("data-type");
-  const fields = TYPE_CONFIG[typeName] && TYPE_CONFIG[typeName].fields;
+  const fields = getTypeByName(typeName)?.fields;
   if (!fields) {
     valueCell.innerHTML = rowEl.dataset.displayHtml || "";
     delete rowEl.dataset.displayHtml;
@@ -676,7 +673,7 @@ function mountChips(types) {
   const pageUidAtMount = currentPageUid;
   const container = document.createElement("div");
   container.className = "meta-type-chips";
-  container.innerHTML = types.map(typeName => chipHtml(typeName)).join("");
+  container.innerHTML = types.map(typeName => chipHtml(typeName, getTypeByName(typeName)?.color)).join("");
   container.querySelectorAll(`.${CHIP_CLASS}`).forEach(chip => {
     chip.setAttribute("data-page-uid", pageUidAtMount);
   });
@@ -700,21 +697,22 @@ function installChipDelegation() {
 }
 
 async function detectTypes(pageUid) {
+  const prefix = getConfig().typePrefix;
   const query = `[:find ?string
-                  :in $ ?pageUid
+                  :in $ ?pageUid ?prefix
                   :where [?p :block/uid ?pageUid]
                          [?p :block/children ?b]
                          [?b :block/string ?string]
-                         [(clojure.string/starts-with? ?string "Type::")]]`;
+                         [(clojure.string/starts-with? ?string ?prefix)]]`;
 
-  const results = await window.roamAlphaAPI.q(query, pageUid);
+  const results = await window.roamAlphaAPI.q(query, pageUid, prefix);
   if (!results || results.length === 0) return [];
 
   const typeNames = [];
   results.forEach(([blockString]) => {
-    const value = blockString.substring("Type::".length);
+    const value = blockString.substring(prefix.length);
     parsePageRefs(value).forEach(ref => {
-      if (TYPE_CONFIG[ref]) typeNames.push(ref);
+      if (getTypeByName(ref)) typeNames.push(ref);
     });
   });
 

@@ -73,7 +73,7 @@ Convert the IIFE in `src/meta-type.js` to a module exporting `default { onload, 
   - Add `extension.js` (and `dist/` if not already ignored) so the built artifact does not pollute git history during development. The Phase 5 decision determines whether we eventually commit it for Depot.
   - Verify: `git status` does not list `extension.js` after a build.
 
-- [ ] **Task 1.7: Manually verify the dev loop end-to-end in Roam.**
+- [x] **Task 1.7: Manually verify the dev loop end-to-end in Roam.**
   - Run `npm run build` to produce `extension.js`.
   - In Roam: Settings → Roam Depot → Installed Extensions → gear icon → enable Developer mode → Developer Extensions → folder-plus icon → choose `/Users/ryansonnek/Projects/roam-meta-type/`.
   - Open a page that has `Type:: [[Project]]` (or similar) — confirm chips render.
@@ -82,7 +82,7 @@ Convert the IIFE in `src/meta-type.js` to a module exporting `default { onload, 
   - Disable the extension from Developer Extensions list — confirm full DOM teardown.
   - Re-enable — confirm chips reappear.
 
-- [ ] **Task 1.8: Commit Phase 1.**
+- [x] **Task 1.8: Commit Phase 1.**
   - Stage: `src/teardown-registry.mjs`, `src/meta-type.js`, `bin/build.mjs`, `test/teardown-registry.test.mjs`, `.gitignore`, plus the plan docs that are still untracked (`docs/plans/2026-04-29-depot-plugin-conversion/`).
   - Commit message: `Convert IIFE to onload/onunload lifecycle for Roam Depot`
   - Body: brief summary of the lifecycle change and the teardown registry.
@@ -96,7 +96,7 @@ Pure refactor. Introduce `src/config.js` exporting `getConfig()` returning the c
 
 ### Tasks
 
-- [ ] **Task 2.1: Add unit tests for `getConfig()` (RED).**
+- [x] **Task 2.1: Add unit tests for `getConfig()` (RED).**
   - File: `test/config.test.mjs` (new)
   - Test cases:
     - `getConfig()` returns an object with shape `{ types, typePrefix, flashColor }`.
@@ -107,13 +107,13 @@ Pure refactor. Introduce `src/config.js` exporting `getConfig()` returning the c
     - A `getTypeByName(name)` helper (or equivalent) returns the right entry or `null` for unknown names — pick whichever shape feels natural and write it into the test.
   - Verify: `npm test` shows the new test file failing.
 
-- [ ] **Task 2.2: Implement `src/config.js` (GREEN).**
+- [x] **Task 2.2: Implement `src/config.js` (GREEN).**
   - File: `src/config.js` (new)
   - Export `getConfig()` returning the structure described in Task 2.1, populated with the values currently hard-coded in `src/meta-type.js:4-26`, `src/meta-type-helpers.mjs:60-68`, and `src/meta-type.js:221-223` (flash color).
   - Export `getTypeByName(name)` (or equivalent) that returns the matching entry or null.
   - Verify: `npm test` is fully green.
 
-- [ ] **Task 2.3: Replace `TYPE_CONFIG[typeName]` reads in `src/meta-type.js`.**
+- [x] **Task 2.3: Replace `TYPE_CONFIG[typeName]` reads in `src/meta-type.js`.**
   - File: `src/meta-type.js`
   - Six existing call sites; identify each by surrounding function:
     - `onChipClick` — `if (!TYPE_CONFIG[typeName])` (was line 352) → `if (!getTypeByName(typeName))`
@@ -125,14 +125,14 @@ Pure refactor. Introduce `src/config.js` exporting `getConfig()` returning the c
   - Add `import { getConfig, getTypeByName } from "./config.js";` at the top of the file (the build script will inline `config.js` exports just like it inlines `meta-type-helpers.mjs` — see Task 2.6).
   - Verify: `npm run build` succeeds; `npm test` green.
 
-- [ ] **Task 2.4: Replace the `"Type::"` literal in `src/meta-type.js`.**
+- [x] **Task 2.4: Replace the `"Type::"` literal in `src/meta-type.js`.**
   - File: `src/meta-type.js`
   - Two sites in `detectTypes`:
     - Datalog query has the literal in `[(clojure.string/starts-with? ?string "Type::")]` (was line 701). Substitute via JS string interpolation: build the query with `` `... [(clojure.string/starts-with? ?string "${getConfig().typePrefix}")]] ` `` (only if `typePrefix` is trusted to be a safe string; otherwise extract to a parameter and pass via `?prefix` to `roamAlphaAPI.q`). **Use the parameterized form** for safety: pattern after the existing `readFieldValue` at lines 717–728 which already uses `?prefix`.
     - Substring strip (was line 708) — `blockString.substring("Type::".length)` → `blockString.substring(getConfig().typePrefix.length)`.
   - Verify: `npm test` green; manual reload in Roam shows chips still detected.
 
-- [ ] **Task 2.5: Move color lookup out of `src/meta-type-helpers.mjs` and into `chipHtml` callers.**
+- [x] **Task 2.5: Move color lookup out of `src/meta-type-helpers.mjs` and into `chipHtml` callers.**
   - File: `src/meta-type-helpers.mjs`
   - Delete `TYPE_ACCENTS` (lines 60–68).
   - Change `chipHtml(typeName)` signature to `chipHtml(typeName, accent)` where `accent` is `{ h, s } | null`. Body uses the passed-in `accent` instead of looking up `TYPE_ACCENTS[typeName]`.
@@ -144,13 +144,13 @@ Pure refactor. Introduce `src/config.js` exporting `getConfig()` returning the c
   - Update the 3 existing `chipHtml` tests to pass `null` as the second arg (preserving today's "no accent" assertion behavior). Add one new test asserting that `chipHtml("Project", { h: 158, s: 50 })` outputs the inline `style="--chip-h:158;--chip-s:50%"` substring.
   - Verify: `npm test` fully green.
 
-- [ ] **Task 2.6: Update `bin/build.mjs` to inline `src/config.js`.**
+- [x] **Task 2.6: Update `bin/build.mjs` to inline `src/config.js`.**
   - File: `bin/build.mjs`
   - Add a third concatenation step: read `src/config.js`, strip `export ` from `export function`/`export const`, prepend it (after helpers, before main source).
   - Order in the output: helpers → config → main. (Config can call helpers if needed, main uses both.)
   - Verify: `npm run build` succeeds; `extension.js` contains `getConfig` defined before its first usage in the main body.
 
-- [ ] **Task 2.7: Move flash color from static `@keyframes` to runtime style injection.**
+- [x] **Task 2.7: Move flash color from static `@keyframes` to runtime style injection.**
   - File: `src/meta-type.js`
   - In `injectStyles` (was lines 83–266), remove the `@keyframes meta-type-flash-pulse { ... }` block (lines 220–224).
   - Add a new helper `injectFlashStyle()` that builds the `@keyframes` rule using `getConfig().flashColor` and appends a separate `<style id="roam-meta-type-flash-styles">` element.
