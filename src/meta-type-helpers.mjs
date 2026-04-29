@@ -70,3 +70,16 @@ export function fieldRowHtml({ label, value, blockUid, isEmpty }) {
   const innerValue = isEmpty ? "—" : renderRoamMarkdown(value);
   return `<div class="meta-type-field"${blockUidAttr}><span class="meta-type-field-label">${escapeText(label)}</span><span class="${valueClass}">${innerValue}</span></div>`;
 }
+
+// Test gap: this helper mutates a DOM node, but the test suite runs without a
+// DOM environment (no jsdom/happy-dom dependency). Logic is exercised
+// indirectly via the same render rules that fieldRowHtml covers.
+export function renderValueCell(cellEl, value) {
+  if (!value) {
+    cellEl.classList.add("meta-type-empty");
+    cellEl.textContent = "—";
+  } else {
+    cellEl.classList.remove("meta-type-empty");
+    cellEl.innerHTML = renderRoamMarkdown(value);
+  }
+}

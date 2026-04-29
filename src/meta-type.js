@@ -1,5 +1,5 @@
 import { createTeardownRegistry } from "./teardown-registry.mjs";
-import { chipHtml, fieldRowHtml, renderRoamMarkdown } from "./meta-type-helpers.mjs";
+import { chipHtml, fieldRowHtml, renderValueCell } from "./meta-type-helpers.mjs";
 import { getConfig, getTypeByName, loadConfigFromSettings, SETTINGS_KEY } from "./config.js";
 import SettingsPanel from "./settings-panel.js";
 
@@ -26,6 +26,9 @@ function debounce(fn, ms) {
 
 function onload({ extensionAPI }) {
   teardown = createTeardownRegistry();
+  openingPanels.clear();
+  openPanels.clear();
+  renderGeneration = 0;
   // Cleanups run LIFO at unload: stopObserving fires first, removeStyles last.
   loadConfigFromSettings(extensionAPI);
   registerSettingsPanel(extensionAPI);
@@ -59,7 +62,7 @@ function registerSettingsPanel(extensionAPI) {
           component: () =>
             SettingsPanel({
               extensionAPI,
-              onSave: () => handleConfigChange(),
+              onSave: rerenderEverything,
             }),
         },
       },
@@ -71,18 +74,19 @@ function registerSettingsPanel(extensionAPI) {
 // new payload via extensionAPI.settings.set AND called setConfig directly, so
 // the in-memory config is current. Re-reading from settings.get here would
 // race with the async write and clobber the fresh in-memory value.
-function handleConfigChange() {
-  rerenderEverything();
-}
-
-// TODO(phase 4): if a chip click is in flight when a config change fires,
+//
+// Known limitation: if a chip click is in flight when a config change fires,
 // the new panel may slot into the sidebar after this cleanup ran. Tolerable for now.
 function rerenderEverything() {
-  Array.from(openPanels.keys()).forEach((key) => closePanel(key));
+  closeAllPanels();
   cleanup();
   removeFlashStyle();
   injectFlashStyle();
   handleCurrentPage(++renderGeneration);
+}
+
+function closeAllPanels() {
+  Array.from(openPanels.keys()).forEach((key) => closePanel(key));
 }
 
 function installEditExitHandlers() {
@@ -109,7 +113,7 @@ function handleKeydown(e) {
 }
 
 function onunload() {
-  Array.from(openPanels.keys()).forEach(key => closePanel(key));
+  closeAllPanels();
   teardown.runAll();
   console.log("[meta-type] destroyed");
 }
@@ -556,13 +560,7 @@ async function onPullWatchFire(panelEntry) {
     const valueCell = row.querySelector(".meta-type-field-value");
     if (!valueCell) return;
     row.setAttribute("data-block-uid", next.uid || "");
-    if (!next.value) {
-      valueCell.classList.add("meta-type-empty");
-      valueCell.textContent = "—";
-    } else {
-      valueCell.classList.remove("meta-type-empty");
-      valueCell.innerHTML = renderRoamMarkdown(next.value);
-    }
+    renderValueCell(valueCell, next.value);
   });
 }
 
@@ -665,16 +663,7 @@ async function exitEditMode(rowEl) {
   const { uid, value } = await readFieldValue(pageUid, fieldName);
   rowEl.setAttribute("data-block-uid", uid || "");
 
-  // Re-render the value cell using fieldRowHtml's value-cell content logic.
-  // We can't easily reuse fieldRowHtml here (it produces a full row); instead,
-  // duplicate its inner-cell logic.
-  if (!value) {
-    valueCell.classList.add("meta-type-empty");
-    valueCell.textContent = "—";
-  } else {
-    valueCell.classList.remove("meta-type-empty");
-    valueCell.innerHTML = renderRoamMarkdown(value);
-  }
+  renderValueCell(valueCell, value);
 
   delete rowEl.dataset.displayHtml;
 }

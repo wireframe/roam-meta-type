@@ -43,16 +43,16 @@ Reload after editing source: rebuild (`npm run build`), then press **`control-d 
 
 ## Configuring types
 
-Open Roam **Settings → Meta Type**. The settings tab shows a Blueprint table with one row per configured type. Each row has:
+The extension ships with no default types. Open **Settings → Meta Type** to add your first one.
+
+The settings tab shows a vertical stack of cards, one per configured type. Each card has:
 
 - **Name** — the type name. Must match the page-ref in `Type::` blocks (e.g., `Project`).
 - **Hue** and **Saturation** — HSL components for the chip's accent color (hue 0–360, saturation 0–100; lightness is computed). A small swatch preview updates as you type.
 - **Fields** — comma-separated list of field names (e.g., `Status, Priority, Due, Topics`). Each becomes a row in the sidebar panel.
-- A trash button on the right to remove the row.
+- A trash button on the right to remove the card.
 
-Below the table are **Add type** (appends a blank row) and **Save**. Click **Save** to persist; the extension closes any open panels and re-renders chips with the new config.
-
-The default config ships 7 types: `Organization`, `Person`, `Project`, `Blog`, `document`, `article`, `book`. The first time you open the settings tab, you'll see those rows pre-populated. Add, edit, or remove rows freely.
+Below the cards are **Add type** (appends a blank card) and **Save**. Click **Save** to persist; the extension closes any open panels and re-renders chips with the new config.
 
 Two settings are not exposed in the UI and remain at their defaults:
 
@@ -61,7 +61,7 @@ Two settings are not exposed in the UI and remain at their defaults:
 
 These are stored in the same JSON value as the types and preserved on every save. Power users who need to change them can edit the underlying setting key directly via Roam's developer tools (key: `types-config` under this extension's settings).
 
-If the stored JSON is missing or malformed (e.g., from a manual edit gone wrong), the extension falls back to the canonical defaults and logs a warning to the browser console.
+If the stored JSON is missing or malformed (e.g., from a manual edit gone wrong), the extension falls back to the empty defaults and logs a warning to the browser console.
 
 ## How a page gets typed
 

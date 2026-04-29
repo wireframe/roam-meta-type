@@ -3,6 +3,9 @@ import {
   parseFieldsInput,
   stringifyFieldsForInput,
   buildSavePayload,
+  parseHueOrFallback,
+  parseSatOrFallback,
+  presetColorForIndex,
 } from "../src/settings-panel.js";
 
 describe("parseFieldsInput", () => {
@@ -84,5 +87,63 @@ describe("buildSavePayload", () => {
     expect(payload.types).toEqual([
       { name: "A", color: { h: 1, s: 2 }, fields: [] },
     ]);
+  });
+});
+
+describe("parseHueOrFallback", () => {
+  it("parses a numeric string into a hue", () => {
+    expect(parseHueOrFallback("220", 100)).toBe(220);
+  });
+
+  it("returns the fallback for an empty string", () => {
+    expect(parseHueOrFallback("", 100)).toBe(100);
+  });
+
+  it("returns the fallback for non-numeric input", () => {
+    expect(parseHueOrFallback("abc", 100)).toBe(100);
+  });
+
+  it("clamps values above 360 to 360", () => {
+    expect(parseHueOrFallback("400", 100)).toBe(360);
+  });
+
+  it("clamps negative values to 0", () => {
+    expect(parseHueOrFallback("-5", 100)).toBe(0);
+  });
+});
+
+describe("parseSatOrFallback", () => {
+  it("parses a numeric string into a saturation", () => {
+    expect(parseSatOrFallback("60", 30)).toBe(60);
+  });
+
+  it("returns the fallback for an empty string", () => {
+    expect(parseSatOrFallback("", 30)).toBe(30);
+  });
+
+  it("returns the fallback for non-numeric input", () => {
+    expect(parseSatOrFallback("abc", 30)).toBe(30);
+  });
+
+  it("clamps values above 100 to 100", () => {
+    expect(parseSatOrFallback("150", 30)).toBe(100);
+  });
+
+  it("clamps negative values to 0", () => {
+    expect(parseSatOrFallback("-5", 30)).toBe(0);
+  });
+});
+
+describe("presetColorForIndex", () => {
+  it("returns the first palette entry for index 0", () => {
+    expect(presetColorForIndex(0)).toEqual({ h: 217, s: 60 });
+  });
+
+  it("wraps to index 0 when index equals palette length (8)", () => {
+    expect(presetColorForIndex(8)).toEqual(presetColorForIndex(0));
+  });
+
+  it("wraps to index 7 when index is 15 (15 % 8 == 7)", () => {
+    expect(presetColorForIndex(15)).toEqual(presetColorForIndex(7));
   });
 });

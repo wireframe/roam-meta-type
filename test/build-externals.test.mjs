@@ -8,16 +8,12 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, "..");
 const bundlePath = resolve(root, "extension.js");
 
-// Regression guard: Roam Depot rejects extensions that re-bundle React,
-// ReactDOM, or Blueprint (Roam ships these on window.*). This test runs
-// the build and asserts that none of those libraries' internals leaked
-// into the output bundle.
-//
-// NOTE: positive assertions ("does CONTAIN window.React" etc.) are
-// deferred to Phase 4.5 when the SettingsPanel component starts importing
-// from "react" and "@blueprintjs/core". Until then, no source code
-// references those modules, so the bundle correctly contains no
-// window.React reference. Only the negative checks are meaningful here.
+// Regression guard: Roam Depot rejects extensions that re-bundle React or
+// Blueprint (Roam ships these on window.*). This test runs the build and
+// asserts that none of those libraries' internals leaked into the output
+// bundle. Positive assertions follow: SettingsPanel imports React and
+// Blueprint, so the bundle should reference window.React and
+// window.Blueprint.Core.
 describe("build bundle externals", () => {
   let bundle;
 
@@ -50,5 +46,13 @@ describe("build bundle externals", () => {
   it("does not contain bundled module wrappers for externalized libs", () => {
     expect(bundle).not.toMatch(/node_modules\/react\//);
     expect(bundle).not.toMatch(/node_modules\/@blueprintjs\//);
+  });
+
+  it("contains references to window.React", () => {
+    expect(bundle).toMatch(/window\.React/);
+  });
+
+  it("contains references to window.Blueprint.Core", () => {
+    expect(bundle).toMatch(/window\.Blueprint\.Core/);
   });
 });

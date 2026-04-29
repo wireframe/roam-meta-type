@@ -14,7 +14,7 @@
 // component reduces to wiring + Blueprint primitives.
 
 import React, { useState } from "react";
-import { Button, Card, HTMLTable, InputGroup, TextArea } from "@blueprintjs/core";
+import { Button, Card, InputGroup, TextArea } from "@blueprintjs/core";
 import { getConfig, setConfig, SETTINGS_KEY } from "./config.js";
 
 // Preset palette for new types. Rotates by row count so each Add type click
@@ -31,7 +31,7 @@ const PRESET_PALETTE = [
   { h: 320, s: 60 },  // pink
 ];
 
-function presetColorForIndex(index) {
+export function presetColorForIndex(index) {
   return PRESET_PALETTE[index % PRESET_PALETTE.length];
 }
 
@@ -62,7 +62,6 @@ function blankRow(index = 0) {
     color,
     hueInput: String(color.h),
     satInput: String(color.s),
-    fields: [],
     fieldsInput: "",
   };
 }
@@ -74,7 +73,6 @@ function cloneTypeForEdit(type) {
     color: { h: type.color.h, s: type.color.s },
     hueInput: String(type.color.h),
     satInput: String(type.color.s),
-    fields: [...type.fields],
     fieldsInput: stringifyFieldsForInput(type.fields),
   };
 }
@@ -84,12 +82,12 @@ function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
-function parseHueOrFallback(input, fallback) {
+export function parseHueOrFallback(input, fallback) {
   const parsed = parseInt(input, 10);
   return Number.isFinite(parsed) ? clamp(parsed, 0, 360) : fallback;
 }
 
-function parseSatOrFallback(input, fallback) {
+export function parseSatOrFallback(input, fallback) {
   const parsed = parseInt(input, 10);
   return Number.isFinite(parsed) ? clamp(parsed, 0, 100) : fallback;
 }

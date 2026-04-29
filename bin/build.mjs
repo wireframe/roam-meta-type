@@ -13,10 +13,7 @@ const root = resolve(__dirname, "..");
 // that reads from `window.Blueprint.Core.Button` at runtime.
 const externalToGlobal = {
   "react": "window.React",
-  "react-dom": "window.ReactDOM",
   "@blueprintjs/core": "window.Blueprint.Core",
-  "@blueprintjs/select": "window.Blueprint.Select",
-  "@blueprintjs/datetime": "window.Blueprint.DateTime",
 };
 
 // Maintenance contract: when source code adds a new NAMED import from one
@@ -28,34 +25,8 @@ const externalToGlobal = {
 // `window.<Lib>` object, so missing symbols become runtime undefined-property
 // errors rather than build errors. Prefer named imports.
 const knownExports = {
-  "react": [
-    "useState",
-    "useEffect",
-    "useCallback",
-    "useMemo",
-    "useRef",
-    "createElement",
-    "Fragment",
-  ],
-  "react-dom": [
-    "createPortal",
-    "render",
-    "unmountComponentAtNode",
-  ],
-  "@blueprintjs/core": [
-    "Button",
-    "Card",
-    "InputGroup",
-    "HTMLTable",
-    "TextArea",
-    "Dialog",
-    "FormGroup",
-    "Tooltip",
-    "Icon",
-    "Intent",
-  ],
-  "@blueprintjs/select": [],
-  "@blueprintjs/datetime": [],
+  "react": ["useState"],
+  "@blueprintjs/core": ["Button", "Card", "InputGroup", "TextArea"],
 };
 
 const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");

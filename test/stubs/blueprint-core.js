@@ -7,11 +7,7 @@ const stub = (name) => {
   return fn;
 };
 export const Button = stub("Button");
+export const Card = stub("Card");
 export const InputGroup = stub("InputGroup");
-export const HTMLTable = stub("HTMLTable");
-export const Dialog = stub("Dialog");
-export const FormGroup = stub("FormGroup");
-export const Tooltip = stub("Tooltip");
-export const Icon = stub("Icon");
-export const Intent = { NONE: "none", PRIMARY: "primary", DANGER: "danger" };
-export default { Button, InputGroup, HTMLTable, Dialog, FormGroup, Tooltip, Icon, Intent };
+export const TextArea = stub("TextArea");
+export default { Button, Card, InputGroup, TextArea };

@@ -3,43 +3,7 @@ export const SETTINGS_KEY = "types-config";
 let currentConfig = null;
 
 const DEFAULT_CONFIG = {
-  types: [
-    {
-      name: "Organization",
-      color: { h: 217, s: 60 },
-      fields: ["Website", "Phone", "Address"],
-    },
-    {
-      name: "Person",
-      color: { h: 32, s: 70 },
-      fields: ["Email", "Phone", "Organization", "Role", "Location", "LinkedIn"],
-    },
-    {
-      name: "Project",
-      color: { h: 158, s: 50 },
-      fields: ["Status", "Priority", "Due", "Topics"],
-    },
-    {
-      name: "Blog",
-      color: { h: 262, s: 55 },
-      fields: ["Source"],
-    },
-    {
-      name: "document",
-      color: { h: 215, s: 14 },
-      fields: ["Author", "Source", "Topics"],
-    },
-    {
-      name: "article",
-      color: { h: 350, s: 60 },
-      fields: ["Author", "Source", "Topics"],
-    },
-    {
-      name: "book",
-      color: { h: 199, s: 60 },
-      fields: ["Author", "Source", "Topics"],
-    },
-  ],
+  types: [],
   typePrefix: "Type::",
   flashColor: { r: 16, g: 107, b: 163 },
 };
@@ -55,7 +19,7 @@ export function setConfig(config) {
 
 export function loadConfigFromSettings(extensionAPI) {
   const raw = extensionAPI.settings.get(SETTINGS_KEY);
-  setConfig(parseConfigJson(raw, DEFAULT_CONFIG));
+  setConfig(parseConfigJson(raw));
 }
 
 export function getTypeByName(name) {
@@ -75,19 +39,19 @@ function hasValidShape(parsed) {
   );
 }
 
-export function parseConfigJson(jsonString, defaults) {
+export function parseConfigJson(jsonString) {
   if (jsonString === null || jsonString === undefined || jsonString === "") {
-    return defaults;
+    return DEFAULT_CONFIG;
   }
   try {
     const parsed = JSON.parse(jsonString);
     if (!hasValidShape(parsed)) {
       console.warn("[meta-type] settings JSON has wrong shape (expected { types, typePrefix, flashColor }), using defaults");
-      return defaults;
+      return DEFAULT_CONFIG;
     }
     return parsed;
   } catch (error) {
     console.warn("[meta-type] settings JSON failed to parse:", error.message);
-    return defaults;
+    return DEFAULT_CONFIG;
   }
 }

@@ -19,61 +19,8 @@ describe("getConfig", () => {
     expect(config).toHaveProperty("flashColor");
   });
 
-  it("returns the 7 canonical type names", () => {
-    const names = getConfig().types.map((t) => t.name);
-    expect(names).toEqual([
-      "Organization",
-      "Person",
-      "Project",
-      "Blog",
-      "document",
-      "article",
-      "book",
-    ]);
-  });
-
-  it("each type has shape { name, color: { h, s }, fields }", () => {
-    for (const type of getConfig().types) {
-      expect(type).toHaveProperty("name");
-      expect(typeof type.name).toBe("string");
-      expect(type).toHaveProperty("color");
-      expect(typeof type.color.h).toBe("number");
-      expect(typeof type.color.s).toBe("number");
-      expect(Array.isArray(type.fields)).toBe(true);
-    }
-  });
-
-  it("type fields exactly match the canonical lists", () => {
-    const byName = Object.fromEntries(
-      getConfig().types.map((t) => [t.name, t.fields])
-    );
-    expect(byName.Organization).toEqual(["Website", "Phone", "Address"]);
-    expect(byName.Person).toEqual([
-      "Email",
-      "Phone",
-      "Organization",
-      "Role",
-      "Location",
-      "LinkedIn",
-    ]);
-    expect(byName.Project).toEqual(["Status", "Priority", "Due", "Topics"]);
-    expect(byName.Blog).toEqual(["Source"]);
-    expect(byName.document).toEqual(["Author", "Source", "Topics"]);
-    expect(byName.article).toEqual(["Author", "Source", "Topics"]);
-    expect(byName.book).toEqual(["Author", "Source", "Topics"]);
-  });
-
-  it("type colors exactly match the canonical TYPE_ACCENTS values", () => {
-    const byName = Object.fromEntries(
-      getConfig().types.map((t) => [t.name, t.color])
-    );
-    expect(byName.Organization).toEqual({ h: 217, s: 60 });
-    expect(byName.Person).toEqual({ h: 32, s: 70 });
-    expect(byName.Project).toEqual({ h: 158, s: 50 });
-    expect(byName.Blog).toEqual({ h: 262, s: 55 });
-    expect(byName.document).toEqual({ h: 215, s: 14 });
-    expect(byName.article).toEqual({ h: 350, s: 60 });
-    expect(byName.book).toEqual({ h: 199, s: 60 });
+  it("ships with no default types", () => {
+    expect(getConfig().types).toEqual([]);
   });
 
   it('typePrefix is "Type::"', () => {
@@ -88,19 +35,24 @@ describe("getConfig", () => {
 });
 
 describe("getTypeByName", () => {
-  it("returns the matching type entry for a known name", () => {
-    expect(getTypeByName("Project")).toEqual({
-      name: "Project",
-      color: { h: 158, s: 50 },
-      fields: ["Status", "Priority", "Due", "Topics"],
-    });
+  it("returns null for any name when no types are configured", () => {
+    expect(getTypeByName("Project")).toBeNull();
+    expect(getTypeByName("anything")).toBeNull();
   });
 
-  it("returns the matching type entry for a lowercase canonical name", () => {
-    const entry = getTypeByName("document");
-    expect(entry.name).toBe("document");
-    expect(entry.color).toEqual({ h: 215, s: 14 });
-    expect(entry.fields).toEqual(["Author", "Source", "Topics"]);
+  it("returns the matching type entry when a custom type is configured", () => {
+    setConfig({
+      types: [
+        { name: "Recipe", color: { h: 10, s: 70 }, fields: ["Cuisine", "Time"] },
+      ],
+      typePrefix: "Type::",
+      flashColor: { r: 1, g: 2, b: 3 },
+    });
+    expect(getTypeByName("Recipe")).toEqual({
+      name: "Recipe",
+      color: { h: 10, s: 70 },
+      fields: ["Cuisine", "Time"],
+    });
   });
 
   it("returns null for an unknown name", () => {
@@ -109,8 +61,6 @@ describe("getTypeByName", () => {
 });
 
 describe("parseConfigJson", () => {
-  const defaults = getConfig();
-
   it("parses valid JSON matching the schema", () => {
     const validConfig = {
       types: [
@@ -123,7 +73,7 @@ describe("parseConfigJson", () => {
       typePrefix: "Type::",
       flashColor: { r: 16, g: 107, b: 163 },
     };
-    const result = parseConfigJson(JSON.stringify(validConfig), defaults);
+    const result = parseConfigJson(JSON.stringify(validConfig));
     expect(result.types[0].name).toBe("Recipe");
     expect(result.types[0].color).toEqual({ h: 10, s: 70 });
     expect(result.types[0].fields).toEqual(["Cuisine", "Time"]);
@@ -132,36 +82,42 @@ describe("parseConfigJson", () => {
   });
 
   it("returns defaults when given an empty string", () => {
-    expect(parseConfigJson("", defaults)).toEqual(defaults);
+    const result = parseConfigJson("");
+    expect(result.types).toEqual([]);
+    expect(result.typePrefix).toBe("Type::");
   });
 
   it("returns defaults when given null", () => {
-    expect(parseConfigJson(null, defaults)).toEqual(defaults);
+    const result = parseConfigJson(null);
+    expect(result.types).toEqual([]);
+    expect(result.typePrefix).toBe("Type::");
   });
 
   it("returns defaults when given undefined", () => {
-    expect(parseConfigJson(undefined, defaults)).toEqual(defaults);
+    const result = parseConfigJson(undefined);
+    expect(result.types).toEqual([]);
+    expect(result.typePrefix).toBe("Type::");
   });
 
   it("returns defaults without throwing for invalid JSON '{'", () => {
-    expect(() => parseConfigJson("{", defaults)).not.toThrow();
-    expect(parseConfigJson("{", defaults)).toEqual(defaults);
+    expect(() => parseConfigJson("{")).not.toThrow();
+    expect(parseConfigJson("{").typePrefix).toBe("Type::");
   });
 
   it("returns defaults without throwing for invalid JSON 'not json'", () => {
-    expect(() => parseConfigJson("not json", defaults)).not.toThrow();
-    expect(parseConfigJson("not json", defaults)).toEqual(defaults);
+    expect(() => parseConfigJson("not json")).not.toThrow();
+    expect(parseConfigJson("not json").typePrefix).toBe("Type::");
   });
 
   it("returns defaults without throwing for valid JSON of the wrong shape (array)", () => {
-    expect(() => parseConfigJson("[]", defaults)).not.toThrow();
-    expect(parseConfigJson("[]", defaults)).toEqual(defaults);
+    expect(() => parseConfigJson("[]")).not.toThrow();
+    expect(parseConfigJson("[]").typePrefix).toBe("Type::");
   });
 
   it("returns defaults without throwing for valid JSON missing required fields", () => {
     const malformed = '{ "types": "string instead of array" }';
-    expect(() => parseConfigJson(malformed, defaults)).not.toThrow();
-    expect(parseConfigJson(malformed, defaults)).toEqual(defaults);
+    expect(() => parseConfigJson(malformed)).not.toThrow();
+    expect(parseConfigJson(malformed).typePrefix).toBe("Type::");
   });
 
   it("preserves unknown keys for forward-compat while keeping known shape", () => {
@@ -177,7 +133,7 @@ describe("parseConfigJson", () => {
       flashColor: { r: 16, g: 107, b: 163 },
       futureField: "ignored",
     };
-    const result = parseConfigJson(JSON.stringify(withExtra), defaults);
+    const result = parseConfigJson(JSON.stringify(withExtra));
     expect(result.types[0].name).toBe("Recipe");
     expect(result.typePrefix).toBe("Type::");
     expect(result.flashColor).toEqual({ r: 16, g: 107, b: 163 });
@@ -197,7 +153,7 @@ describe("config state", () => {
   it("getConfig returns DEFAULT_CONFIG before any setConfig call", () => {
     const config = getConfig();
     expect(config.typePrefix).toBe("Type::");
-    expect(config.types.map((t) => t.name)).toContain("Organization");
+    expect(config.types).toEqual([]);
   });
 
   it("setConfig replaces the config returned by getConfig", () => {
@@ -210,7 +166,7 @@ describe("config state", () => {
     setConfig(customConfig);
     setConfig(null);
     expect(getConfig().typePrefix).toBe("Type::");
-    expect(getConfig().types.map((t) => t.name)).toContain("Organization");
+    expect(getConfig().types).toEqual([]);
   });
 
   it("getTypeByName uses the active config after setConfig", () => {
