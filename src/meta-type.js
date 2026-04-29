@@ -1,18 +1,18 @@
 import { createTeardownRegistry } from "./teardown-registry.mjs";
-import { chipHtml, fieldRowHtml, renderValueCell } from "./meta-type-helpers.mjs";
+import { chipHtml } from "./meta-type-helpers.mjs";
 import { getConfig, getTypeByName, loadConfigFromSettings, SETTINGS_KEY } from "./config.js";
 import SettingsPanel from "./settings-panel.js";
+import { getCurrentPageTitle, getPageUid, detectTypes } from "./roam-data.js";
+import { installEditExitHandlers } from "./inline-editor.js";
+import { onChipClick, closeAllPanels, resetPanelState } from "./panel.js";
 
 const CHIP_CLASS = "meta-type-chip";
 const PANEL_CLASS = "meta-type-panel";
-const SIDEBAR_CONTENT_SELECTOR = "#roam-right-sidebar-content";
 
 let observer = null;
 let currentPageUid = null;
 let renderGeneration = 0;
 let teardown = null;
-const openPanels = new Map();
-const openingPanels = new Set();
 
 function debounce(fn, ms) {
   let timer;
@@ -24,8 +24,7 @@ function debounce(fn, ms) {
 
 function onload({ extensionAPI }) {
   teardown = createTeardownRegistry();
-  openingPanels.clear();
-  openPanels.clear();
+  resetPanelState();
   renderGeneration = 0;
   // Cleanups run LIFO at unload: stopObserving fires first, clearFlashColor last.
   loadConfigFromSettings(extensionAPI);
@@ -80,33 +79,6 @@ function rerenderEverything() {
   handleCurrentPage(++renderGeneration);
 }
 
-function closeAllPanels() {
-  Array.from(openPanels.keys()).forEach((key) => closePanel(key));
-}
-
-function installEditExitHandlers() {
-  document.addEventListener("mousedown", handleClickOutside, true);
-  document.addEventListener("keydown", handleKeydown, true);
-  return () => {
-    document.removeEventListener("mousedown", handleClickOutside, true);
-    document.removeEventListener("keydown", handleKeydown, true);
-  };
-}
-
-function handleClickOutside(e) {
-  const editing = document.querySelector('.meta-type-field[data-editing="true"]');
-  if (!editing) return;
-  if (editing.contains(e.target)) return;
-  exitEditMode(editing);
-}
-
-function handleKeydown(e) {
-  if (e.key !== "Escape") return;
-  const editing = document.querySelector('.meta-type-field[data-editing="true"]');
-  if (!editing) return;
-  exitEditMode(editing);
-}
-
 function onunload() {
   closeAllPanels();
   teardown.runAll();
@@ -124,21 +96,6 @@ function clearFlashColor() {
   document.documentElement.style.removeProperty('--meta-type-flash-r');
   document.documentElement.style.removeProperty('--meta-type-flash-g');
   document.documentElement.style.removeProperty('--meta-type-flash-b');
-}
-
-function getCurrentPageTitle() {
-  const titleEl = document.querySelector(".rm-title-display");
-  if (!titleEl) return null;
-  return titleEl.textContent.trim();
-}
-
-async function getPageUid(pageTitle) {
-  const result = await window.roamAlphaAPI.q(
-    `[:find ?uid :in $ ?title :where [?e :node/title ?title] [?e :block/uid ?uid]]`,
-    pageTitle
-  );
-  if (result && result.length > 0) return result[0][0];
-  return null;
 }
 
 function startObserving() {
@@ -191,309 +148,6 @@ function cleanup() {
   currentPageUid = null;
 }
 
-function parsePageRefs(blockString) {
-  const refs = [];
-  const hashMatches = blockString.match(/#[\w-]+/g) || [];
-  hashMatches.forEach(ref => refs.push(ref.substring(1)));
-  const bracketMatches = blockString.match(/\[\[([^\]]+)\]\]/g) || [];
-  bracketMatches.forEach(ref => refs.push(ref.slice(2, -2)));
-  return refs;
-}
-
-async function onChipClick(pageUid, typeName) {
-  if (!pageUid) {
-    console.warn("[meta-type] onChipClick called without pageUid; ignoring");
-    return;
-  }
-  const type = getTypeByName(typeName);
-  if (!type) {
-    console.warn(`[meta-type] unknown type: ${typeName}`);
-    return;
-  }
-
-  const key = `${pageUid}::${typeName}`;
-  const existing = openPanels.get(key);
-  if (existing) {
-    existing.element.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    flashElement(existing.element);
-    return;
-  }
-
-  if (openingPanels.has(key)) return;
-  openingPanels.add(key);
-  try {
-    const fields = type.fields;
-    const fieldData = await readAllFields(pageUid, fields);
-
-    const panelEl = renderPanel(pageUid, typeName, fieldData);
-
-    await window.roamAlphaAPI.ui.rightSidebar.open();
-    const sidebar = await waitForElement(SIDEBAR_CONTENT_SELECTOR, 2000);
-    if (!sidebar) {
-      console.error("[meta-type] sidebar content area not found");
-      return;
-    }
-
-    sidebar.prepend(panelEl);
-
-    const entry = {
-      pageUid,
-      typeName,
-      fields: fields.map(name => ({
-        name,
-        blockUid: fieldData[name].uid,
-        value: fieldData[name].value
-      })),
-      element: panelEl,
-      watchHandle: null
-    };
-    openPanels.set(key, entry);
-    subscribePullWatch(entry);
-  } finally {
-    openingPanels.delete(key);
-  }
-}
-
-function renderPanel(pageUid, typeName, fieldData) {
-  // Caller (onChipClick) has already validated the type exists, so `type` is non-null.
-  const type = getTypeByName(typeName);
-  const fields = type.fields;
-  const rowsHtml = fields
-    .map(name => fieldRowHtml({
-      label: name,
-      value: fieldData[name].value,
-      blockUid: fieldData[name].uid,
-      isEmpty: !fieldData[name].value
-    }))
-    .join("");
-
-  const panel = document.createElement("div");
-  panel.className = PANEL_CLASS;
-  panel.setAttribute("data-page-uid", pageUid);
-  panel.setAttribute("data-type", typeName);
-  panel.innerHTML = `
-    <div class="meta-type-panel-header">
-      ${chipHtml(typeName, type.color)}
-      <button class="meta-type-panel-close" aria-label="Close">✕</button>
-    </div>
-    <div class="meta-type-panel-body">${rowsHtml}</div>
-  `;
-
-  const headerChip = panel.querySelector(`.meta-type-panel-header .${CHIP_CLASS}`);
-  if (headerChip) {
-    headerChip.addEventListener("click", () => {
-      window.roamAlphaAPI.ui.mainWindow.openPage({ page: { title: typeName } });
-    });
-  }
-
-  const closeBtn = panel.querySelector(".meta-type-panel-close");
-  if (closeBtn) {
-    closeBtn.addEventListener("click", () => closePanel(`${pageUid}::${typeName}`));
-  }
-
-  const rows = panel.querySelectorAll(".meta-type-panel-body .meta-type-field");
-  rows.forEach((row, index) => {
-    const fieldName = fields[index];
-    row.addEventListener("click", (e) => {
-      // Don't re-trigger edit mode when clicking inside the embedded block editor.
-      if (e.target.closest(".meta-type-edit-host")) return;
-      const blockUid = row.getAttribute("data-block-uid");
-      onFieldClick(pageUid, fieldName, blockUid, row);
-    });
-  });
-
-  return panel;
-}
-
-function closePanel(key) {
-  const entry = openPanels.get(key);
-  if (!entry) return;
-  unsubscribePullWatch(entry);
-  if (entry.element && entry.element.parentElement) {
-    entry.element.remove();
-  }
-  openPanels.delete(key);
-}
-
-function subscribePullWatch(panelEntry) {
-  const pattern = "[:block/uid :block/string {:block/children ...}]";
-  const entityId = `[:block/uid "${panelEntry.pageUid}"]`;
-  const callback = () => onPullWatchFire(panelEntry);
-
-  try {
-    window.roamAlphaAPI.data.addPullWatch(pattern, entityId, callback);
-    panelEntry.watchHandle = { pattern, entityId, callback };
-  } catch (err) {
-    console.error("[meta-type] failed to subscribe pull-watch:", err);
-  }
-}
-
-function unsubscribePullWatch(panelEntry) {
-  if (!panelEntry.watchHandle) return;
-  const { pattern, entityId, callback } = panelEntry.watchHandle;
-  try {
-    window.roamAlphaAPI.data.removePullWatch(pattern, entityId, callback);
-  } catch (err) {
-    console.error("[meta-type] failed to unsubscribe pull-watch:", err);
-  }
-  panelEntry.watchHandle = null;
-}
-
-async function onPullWatchFire(panelEntry) {
-  const fieldNames = panelEntry.fields.map(f => f.name);
-  const fieldData = await readAllFields(panelEntry.pageUid, fieldNames);
-
-  const rows = panelEntry.element.querySelectorAll(".meta-type-panel-body .meta-type-field");
-  rows.forEach((row, index) => {
-    // Skip rows in edit mode — Roam's embedded editor owns that DOM.
-    if (row.dataset.editing === "true") return;
-
-    const fieldName = fieldNames[index];
-    const next = fieldData[fieldName];
-    if (!next) return;
-
-    const cached = panelEntry.fields[index];
-    if (cached.value === next.value && cached.blockUid === next.uid) return;
-
-    // Update cached state.
-    cached.value = next.value;
-    cached.blockUid = next.uid;
-
-    // Re-render the value cell.
-    const valueCell = row.querySelector(".meta-type-field-value");
-    if (!valueCell) return;
-    row.setAttribute("data-block-uid", next.uid || "");
-    renderValueCell(valueCell, next.value);
-  });
-}
-
-function mountInlineEditor(rowEl, blockUid) {
-  const valueCell = rowEl.querySelector(".meta-type-field-value");
-  if (!valueCell) return;
-
-  // Stash current display HTML for restore later.
-  rowEl.dataset.displayHtml = valueCell.innerHTML;
-  rowEl.dataset.editing = "true";
-
-  valueCell.innerHTML = '<div class="meta-type-edit-host"></div>';
-  const host = valueCell.querySelector(".meta-type-edit-host");
-
-  window.roamAlphaAPI.ui.components.renderBlock({
-    uid: blockUid,
-    el: host
-  });
-
-  focusEditHost(host, blockUid);
-}
-
-function focusEditHost(host, blockUid, attempts = 30) {
-  // If textarea is mounted (edit mode), just focus and return.
-  const textarea = host.querySelector("textarea.rm-block-input");
-  if (textarea) {
-    textarea.focus();
-    if (typeof textarea.setSelectionRange === "function") {
-      const end = textarea.value.length;
-      textarea.setSelectionRange(end, end);
-    }
-    return;
-  }
-
-  // Otherwise, Roam is in view mode. Find the view element and ask Roam to flip it.
-  const viewEl = host.querySelector(`[id^="block-input-"][id$="-${blockUid}"]`);
-  if (viewEl) {
-    const windowId = parseWindowId(viewEl.id, blockUid);
-    if (windowId && !host.dataset.metaTypeFocusFired) {
-      host.dataset.metaTypeFocusFired = "true";
-      try {
-        window.roamAlphaAPI.ui.setBlockFocusAndSelection({
-          location: { "block-uid": blockUid, "window-id": windowId }
-        });
-      } catch (err) {
-        console.error("[meta-type] setBlockFocusAndSelection failed:", err);
-      }
-    }
-  }
-
-  if (attempts > 0) {
-    setTimeout(() => focusEditHost(host, blockUid, attempts - 1), 30);
-  }
-}
-
-function parseWindowId(elementId, blockUid) {
-  const prefix = "block-input-";
-  const suffix = `-${blockUid}`;
-  if (!elementId.startsWith(prefix) || !elementId.endsWith(suffix)) return null;
-  return elementId.slice(prefix.length, elementId.length - suffix.length);
-}
-
-async function exitEditMode(rowEl) {
-  if (rowEl.dataset.editing !== "true") return;
-  delete rowEl.dataset.editing;
-
-  const valueCell = rowEl.querySelector(".meta-type-field-value");
-  if (!valueCell) return;
-
-  // Re-read the current value via the panel's pageUid + field name.
-  // The panel's data attributes carry pageUid; the row's index resolves the field name.
-  const panelEl = rowEl.closest(`.${PANEL_CLASS}`);
-  if (!panelEl) {
-    // Fallback: restore prior display HTML
-    valueCell.innerHTML = rowEl.dataset.displayHtml || "";
-    delete rowEl.dataset.displayHtml;
-    return;
-  }
-
-  const pageUid = panelEl.getAttribute("data-page-uid");
-  const typeName = panelEl.getAttribute("data-type");
-  const fields = getTypeByName(typeName)?.fields;
-  if (!fields) {
-    valueCell.innerHTML = rowEl.dataset.displayHtml || "";
-    delete rowEl.dataset.displayHtml;
-    return;
-  }
-
-  const rows = panelEl.querySelectorAll(".meta-type-panel-body .meta-type-field");
-  const index = Array.prototype.indexOf.call(rows, rowEl);
-  const fieldName = fields[index];
-
-  if (!fieldName) {
-    valueCell.innerHTML = rowEl.dataset.displayHtml || "";
-    delete rowEl.dataset.displayHtml;
-    return;
-  }
-
-  // Re-query field value (Roam may have saved a new value while in edit mode).
-  const { uid, value } = await readFieldValue(pageUid, fieldName);
-  rowEl.setAttribute("data-block-uid", uid || "");
-
-  renderValueCell(valueCell, value);
-
-  delete rowEl.dataset.displayHtml;
-}
-
-function waitForElement(selector, timeoutMs) {
-  return new Promise(resolve => {
-    const found = document.querySelector(selector);
-    if (found) return resolve(found);
-    const start = Date.now();
-    const interval = setInterval(() => {
-      const el = document.querySelector(selector);
-      if (el) {
-        clearInterval(interval);
-        resolve(el);
-      } else if (Date.now() - start > timeoutMs) {
-        clearInterval(interval);
-        resolve(null);
-      }
-    }, 50);
-  });
-}
-
-function flashElement(el) {
-  el.classList.add("meta-type-flash");
-  setTimeout(() => el.classList.remove("meta-type-flash"), 600);
-}
-
 function clearChips() {
   document.querySelectorAll(`.meta-type-chips, .${CHIP_CLASS}`).forEach(el => {
     if (el.closest(`.${PANEL_CLASS}`)) return;
@@ -538,84 +192,4 @@ function installChipDelegation() {
   return () => document.body.removeEventListener("click", handleChipClick);
 }
 
-async function detectTypes(pageUid) {
-  const prefix = getConfig().typePrefix;
-  const query = `[:find ?string
-                  :in $ ?pageUid ?prefix
-                  :where [?p :block/uid ?pageUid]
-                         [?p :block/children ?b]
-                         [?b :block/string ?string]
-                         [(clojure.string/starts-with? ?string ?prefix)]]`;
-
-  const results = await window.roamAlphaAPI.q(query, pageUid, prefix);
-  if (!results || results.length === 0) return [];
-
-  const typeNames = [];
-  results.forEach(([blockString]) => {
-    const value = blockString.substring(prefix.length);
-    parsePageRefs(value).forEach(ref => {
-      if (getTypeByName(ref)) typeNames.push(ref);
-    });
-  });
-
-  return typeNames;
-}
-
-async function readFieldValue(pageUid, fieldName) {
-  const prefix = fieldName + "::";
-  const query = `[:find ?uid ?string
-                  :in $ ?pageUid ?prefix
-                  :where [?p :block/uid ?pageUid]
-                         [?p :block/children ?b]
-                         [?b :block/string ?string]
-                         [?b :block/uid ?uid]
-                         [(clojure.string/starts-with? ?string ?prefix)]]`;
-
-  const results = await window.roamAlphaAPI.q(query, pageUid, prefix);
-  if (!results || results.length === 0) return { uid: null, value: "" };
-
-  const [uid, blockString] = results[0];
-  const value = blockString.substring(prefix.length).trim();
-  return { uid, value };
-}
-
-async function readAllFields(pageUid, fields) {
-  const entries = await Promise.all(
-    fields.map(async (field) => [field, await readFieldValue(pageUid, field)])
-  );
-  return Object.fromEntries(entries);
-}
-
-async function createFieldBlock(pageUid, fieldName) {
-  await window.roamAlphaAPI.createBlock({
-    location: { "parent-uid": pageUid, order: 0 },
-    block: { string: `${fieldName}:: ` }
-  });
-  const { uid } = await readFieldValue(pageUid, fieldName);
-  return uid;
-}
-
-async function onFieldClick(pageUid, fieldName, blockUid, rowEl) {
-  try {
-    // Exit any other row currently in edit mode first.
-    const editing = document.querySelector('.meta-type-field[data-editing="true"]');
-    if (editing && editing !== rowEl) {
-      await exitEditMode(editing);
-    }
-
-    let uid = blockUid;
-    if (!uid) {
-      uid = await createFieldBlock(pageUid, fieldName);
-      if (!uid) return;
-      rowEl.setAttribute("data-block-uid", uid);
-    }
-
-    if (rowEl.dataset.editing === "true") return;
-    mountInlineEditor(rowEl, uid);
-  } catch (err) {
-    console.error("[meta-type] failed to open field for edit:", err);
-  }
-}
-
 export default { onload, onunload };
-
