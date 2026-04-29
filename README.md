@@ -10,61 +10,58 @@ Roam's freedom as an outline is the whole point. But the people, projects, books
 
 ## What it does
 
-1. Unobtrusive pill-shaped **chip** page identification based on supported `Type::` attribute.  Multi-typed pages (`Type:: #Project #Blog`) get one chip per type.
+1. Unobtrusive pill-shaped **chip** page identification based on supported `Type::` attribute. Multi-typed pages (`Type:: #Project #Blog`) get one chip per type.
 2. Click a chip → a **panel** mounts at the top of Roam's right sidebar with that type's pinned fields, rendered as label/value rows.
-![Sidebar panel for a Project](screenshots/panel-project.png) 
-3. Sidepanel is an integrated **inline-editor**.  Click any row → it flips to inline edit mode using Roam's own block editor (autocomplete, page-refs, formatting — all of it).  Click any value to flip the row into Roam's block editor.  Empty rows render as `—`. Click and the plugin creates the missing block (e.g. `Status:: `) before flipping into edit mode.
-![Inline editing a row](screenshots/inline-edit.png)
+   ![Sidebar panel for a Project](screenshots/panel-project.png)
+3. Sidepanel is an integrated **inline-editor**. Click any row → it flips to inline edit mode using Roam's own block editor (autocomplete, page-refs, formatting — all of it). Click any value to flip the row into Roam's block editor. Empty rows render as `—`. Click and the plugin creates the missing block (e.g. `Status:: `) before flipping into edit mode.
+   ![Inline editing a row](screenshots/inline-edit.png)
 4. Sidepanel reactively refreshes to updates **live**: edit `Priority::` directly in the page body, the panel updates without a re-render.
-
-Pure roam/js. No external dependencies. No changes to Roam itself. The whole thing is one IIFE you paste into a config block.
+5. **Configurable** types, fields, and accent colors via the Roam settings panel (no source edits required).
 
 ## Install
 
-You need one block in your Roam graph.
+### From the Roam Depot
 
-1. **Copy the bundle.** Open [`dist/meta-type.bundle.js`](dist/meta-type.bundle.js) and copy the entire file to your clipboard.
-2. **Make a config page.** Create (or pick) a page in your graph to host the plugin — e.g. `roam/js/meta-type`. Any page works; this is just where the code lives.
-3. **Paste into a `roam/js` block.** On that page, create a block whose content is:
-   ```
-   {{[[roam/js]]}}
-   ```
-   Indent a child block under it. Paste the bundle into the child block, wrapped in a triple-backtick `javascript` code fence:
-   <pre>
-   ```javascript
-   (() => {
-     "use strict";
-     // ...the bundle contents...
-   })();
-   ```
-   </pre>
-4. **Allow the script.** The first time Roam sees a `roam/js` block on a page, it shows a yellow "Yes, I know what I'm doing" button — click it.
-5. **Reload.** The plugin attaches a MutationObserver on page navigation. Open any page with a `Type::` attribute matching a configured type and you should see a chip appear.
+In Roam: **Settings → Roam Depot → Browse → Meta Type → Install**. (Available once the Depot PR is merged.)
 
-To uninstall, remove the block (or run `window.roamMetaTypeDestroy()` in the console to tear it down for the current session).
+### As a local developer extension
+
+For early testing or development:
+
+1. Clone and build:
+   ```bash
+   git clone https://github.com/wireframe/roam-meta-type.git
+   cd roam-meta-type
+   npm install
+   npm run build
+   ```
+2. In Roam: **Settings → Roam Depot → Installed Extensions** → gear icon → enable **Developer mode**.
+3. A **Developer Extensions** section appears. Click the folder-plus icon and choose this repo's folder. Roam loads `extension.js` and the sibling `extension.css` automatically from that folder.
+4. The extension loads. Open any page with a `Type::` attribute and a chip appears.
+
+Reload after editing source: rebuild (`npm run build`), then press **`control-d control-r`** in Roam.
 
 ## Configuring types
 
-The set of recognized types and their pinned fields is hardcoded in [`src/meta-type.js`](src/meta-type.js) at the top:
+The extension ships with no default types. Open **Settings → Meta Type** to add your first one.
 
-```js
-const TYPE_CONFIG = {
-  "Organization": { fields: ["Website", "Phone", "Address"] },
-  "Person":       { fields: ["Email", "Phone", "Organization", "Role", "Location", "LinkedIn"] },
-  "Project":      { fields: ["Status", "Priority", "Due", "Topics"] },
-  "Blog":         { fields: ["Source"] },
-  "document":     { fields: ["Author", "Source", "Topics"] },
-  "article":      { fields: ["Author", "Source", "Topics"] },
-  "book":         { fields: ["Author", "Source", "Topics"] },
-};
-```
+The settings tab shows a vertical stack of cards, one per configured type. Each card has:
 
-To add or change a type:
-1. Edit `TYPE_CONFIG`.
-2. Run `npm run build` to regenerate `dist/meta-type.bundle.js`.
-3. Re-paste the bundle into your Roam config block.
+- **Name** — the type name. Must match the page-ref in `Type::` blocks (e.g., `Project`).
+- **Hue** and **Saturation** — HSL components for the chip's accent color (hue 0–360, saturation 0–100; lightness is computed). A small swatch preview updates as you type.
+- **Fields** — comma-separated list of field names (e.g., `Status, Priority, Due, Topics`). Each becomes a row in the sidebar panel.
+- A trash button on the right to remove the card.
 
-A future version will read `Pinned Fields::` from the type page itself so the type defines its own schema.
+Below the cards are **Add type** (appends a blank card) and **Save**. Click **Save** to persist; the extension closes any open panels and re-renders chips with the new config.
+
+Two settings are not exposed in the UI and remain at their defaults:
+
+- `typePrefix` — the block prefix used to detect typed pages (default `Type::`).
+- `flashColor` — the RGB highlight color for the click-flash animation (default `{ r: 16, g: 107, b: 163 }`).
+
+These are stored in the same JSON value as the types and preserved on every save. Power users who need to change them can edit the underlying setting key directly via Roam's developer tools (key: `types-config` under this extension's settings).
+
+If the stored JSON is missing or malformed (e.g., from a manual edit gone wrong), the extension falls back to the empty defaults and logs a warning to the browser console.
 
 ## How a page gets typed
 
@@ -78,21 +75,25 @@ Add a `Type::` attribute as a top-level block on the page, with one or more `#Ty
 - Topics:: [[Roam]] [[Productivity]]
 ```
 
-The plugin reads `Type::`, looks each reference up in `TYPE_CONFIG`, and renders one chip per known type. Unknown types are silently skipped — no chip, no error.
+The plugin reads `Type::`, looks each reference up in the configured types, and renders one chip per known type. Unknown types are silently skipped — no chip, no error.
 
 ## Development
 
 ```bash
-npm install         # install vitest
-npm test            # run unit tests against helpers
-npm run build       # rebuild dist/meta-type.bundle.js from src/
+npm install         # vitest, esbuild, dev deps
+npm test            # run unit tests (vitest)
+npm run build       # rebuild extension.js with esbuild
 ```
 
-The build is a plain file concatenation: `src/meta-type-helpers.mjs` (with `export` stripped) gets injected after the `"use strict";` line of `src/meta-type.js` so the helpers live inside the IIFE scope. See [`bin/build.mjs`](bin/build.mjs).
+The build uses [esbuild](https://esbuild.github.io/) with a small custom plugin (`bin/build.mjs`) that externalizes React, ReactDOM, and BlueprintJS to Roam's `window.*` globals — Roam Depot mandates that extensions consume these from there rather than re-bundling them. Source code uses standard ESM imports (`import { Button } from "@blueprintjs/core"`); the plugin remaps them at bundle time.
+
+When adding a new named import from React or BlueprintJS, update the `knownExports` table in `bin/build.mjs` — esbuild fails the build with "no matching export" if a named symbol is missing.
+
+The output `extension.js` is a single ESM file with `export default { onload, onunload }` — the Roam Depot plugin contract.
 
 ## Architecture (one-paragraph version)
 
-A single MutationObserver watches `.rm-title-display` for page navigation. On navigation, the plugin queries the page's `Type::` attribute, removes any old chips, and renders new ones as siblings of the title element (never as children — modifying the title element causes edit-mode jank). Clicking a chip opens Roam's right sidebar via `roamAlphaAPI.ui.rightSidebar.open()`, then prepends a custom panel `<div>` to `#roam-right-sidebar-content`. Each open panel registers one `roamAlphaAPI.data.addPullWatch` rooted at the page UID, watching `:block/string` and `:block/children`; the callback diffs the new field values and re-renders affected rows. Field rows in edit mode are not re-rendered — Roam's block editor (mounted via `roamAlphaAPI.ui.components.renderBlock`) owns that DOM until the user blurs.
+The extension exports `{ onload({ extensionAPI }), onunload() }`. It also ships an `extension.css` that Roam loads alongside `extension.js` from the extension folder. On load it reads the config from `extensionAPI.settings` (key: `types-config`, JSON-encoded with fallback to baked-in defaults), registers a Blueprint-based settings panel under "Meta Type" using `extensionAPI.settings.panel.create({ action: { type: "reactComponent", ... } })`, installs document-level listeners for click-outside-to-exit-edit and Escape-to-exit-edit, registers a chip-click delegation listener on `document.body`, and starts a `MutationObserver` on `.rm-title-display` for page navigation. Every setup operation registers a corresponding cleanup with a small LIFO teardown registry; on unload everything is reversed in reverse-registration order so the observer is silenced before the DOM is torn down. On navigation, the plugin queries the page's `Type::` attribute, removes any old chips, and renders new ones as siblings of the title element. Clicking a chip opens Roam's right sidebar via `roamAlphaAPI.ui.rightSidebar.open()` and prepends a custom panel `<div>` to `#roam-right-sidebar-content`. Each open panel registers a `roamAlphaAPI.data.addPullWatch` rooted at the page UID; the callback diffs new field values and re-renders affected rows without disturbing rows in edit mode (Roam's block editor, mounted via `roamAlphaAPI.ui.components.renderBlock`, owns that DOM until the user blurs). When the user saves a config change in the settings panel, all open panels close, chips re-mount with the new types/colors, and the flash-color CSS custom properties (`--meta-type-flash-{r,g,b}`) update on `:root` so the keyframes in `extension.css` pick up the new RGB.
 
 ## License
 

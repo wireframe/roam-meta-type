@@ -3,23 +3,28 @@ import { chipHtml, fieldRowHtml, renderRoamMarkdown } from "../src/meta-type-hel
 
 describe("chipHtml", () => {
   it("returns a span with meta-type-chip class, data-type attribute, and #TypeName text", () => {
-    const html = chipHtml("Project");
+    const html = chipHtml("Project", null);
     expect(html).toContain('class="meta-type-chip"');
     expect(html).toContain('data-type="Project"');
     expect(html).toContain(">#Project<");
   });
 
   it("escapes the typeName in the data-type attribute", () => {
-    const html = chipHtml('Bad"Name');
+    const html = chipHtml('Bad"Name', null);
     expect(html).not.toContain('data-type="Bad"Name"');
     expect(html).toContain("&quot;");
   });
 
   it("html-escapes < and > in plain text content", () => {
-    const html = chipHtml("A<B>");
+    const html = chipHtml("A<B>", null);
     expect(html).not.toMatch(/>#A<B>/);
     expect(html).toContain("&lt;");
     expect(html).toContain("&gt;");
+  });
+
+  it("renders inline style with accent", () => {
+    const html = chipHtml("Project", { h: 158, s: 50 });
+    expect(html).toContain('style="--chip-h:158;--chip-s:50%"');
   });
 });
 
