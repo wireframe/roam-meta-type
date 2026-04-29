@@ -157,10 +157,10 @@ Pure refactor. Introduce `src/config.js` exporting `getConfig()` returning the c
   - Call `injectFlashStyle()` from `onload` after `injectStyles()`. Register a teardown that removes the flash style element (mirror the `removeStyles` pattern at lines 268–271).
   - Verify: `npm run build` + reload in Roam (`control-d control-r`) — confirm clicking an already-open chip flashes the panel as before.
 
-- [ ] **Task 2.8: Manual smoke test.**
+- [x] **Task 2.8: Manual smoke test.**
   - In Roam (after `control-d control-r`), confirm: chips render with correct colors for all 7 known types, panel opens, fields render, edits persist, flash animation plays. `git diff` should read as mechanical — no behavior changed.
 
-- [ ] **Task 2.9: Commit Phase 2.**
+- [x] **Task 2.9: Commit Phase 2.**
   - Stage: `src/config.js`, `src/meta-type.js`, `src/meta-type-helpers.mjs`, `bin/build.mjs`, `test/config.test.mjs`, `test/meta-type-helpers.test.mjs`.
   - Commit message: `Centralize configurable values behind getConfig() accessor`
 
@@ -173,7 +173,7 @@ Wire `getConfig()` to read a single JSON-encoded `input` setting and parse it. H
 
 ### Tasks
 
-- [ ] **Task 3.1: Add unit tests for `parseConfigJson(value, defaults)` (RED).**
+- [x] **Task 3.1: Add unit tests for `parseConfigJson(value, defaults)` (RED).**
   - File: `test/config.test.mjs`
   - Test cases for a new `parseConfigJson(jsonString, defaults)` pure function:
     - Valid JSON matching the schema → parsed config returned.
@@ -183,12 +183,12 @@ Wire `getConfig()` to read a single JSON-encoded `input` setting and parse it. H
     - Valid JSON with extra unknown keys → kept (forward-compat) but the known shape is preserved.
   - Verify: tests fail.
 
-- [ ] **Task 3.2: Implement `parseConfigJson` (GREEN).**
+- [x] **Task 3.2: Implement `parseConfigJson` (GREEN).**
   - File: `src/config.js`
   - Add `parseConfigJson(jsonString, defaults)` per Task 3.1's spec.
   - Verify: `npm test` green.
 
-- [ ] **Task 3.3: Refactor `getConfig()` to read from `extensionAPI.settings`.**
+- [x] **Task 3.3: Refactor `getConfig()` to read from `extensionAPI.settings`.**
   - File: `src/config.js`
   - Add a module-level `let currentConfig = null;` and a `setConfig(config)` setter.
   - Add `loadConfigFromSettings(extensionAPI)`:
@@ -198,7 +198,7 @@ Wire `getConfig()` to read a single JSON-encoded `input` setting and parse it. H
   - Modify `getConfig()` to return `currentConfig` if set, else the defaults.
   - Verify: `npm test` green; existing `getConfig()` tests still pass with no `extensionAPI` (uses defaults).
 
-- [ ] **Task 3.4: Register the settings panel in `onload`.**
+- [x] **Task 3.4: Register the settings panel in `onload`.**
   - File: `src/meta-type.js`
   - In `onload({ extensionAPI })`, before `injectStyles()`:
     - Call `loadConfigFromSettings(extensionAPI)`.

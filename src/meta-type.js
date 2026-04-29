@@ -22,6 +22,8 @@ function debounce(fn, ms) {
 function onload({ extensionAPI }) {
   teardown = createTeardownRegistry();
   // Cleanups run LIFO at unload: stopObserving fires first, removeStyles last.
+  loadConfigFromSettings(extensionAPI);
+  registerSettingsPanel(extensionAPI);
   injectStyles();
   teardown.register(removeStyles);
   injectFlashStyle();
@@ -33,6 +35,39 @@ function onload({ extensionAPI }) {
   teardown.register(stopObserving);
   handleCurrentPage(++renderGeneration);
   console.log("[meta-type] initialized");
+}
+
+function registerSettingsPanel(extensionAPI) {
+  extensionAPI.settings.panel.create({
+    tabTitle: "Meta Type",
+    settings: [
+      {
+        id: SETTINGS_KEY,
+        name: "Types config (JSON)",
+        description:
+          "JSON config for types, fields, colors, and prefix. See README for shape.",
+        action: {
+          type: "input",
+          onChange: () => handleConfigChange(extensionAPI),
+        },
+      },
+    ],
+  });
+}
+
+function handleConfigChange(extensionAPI) {
+  loadConfigFromSettings(extensionAPI);
+  rerenderEverything();
+}
+
+// TODO(phase 4): if a chip click is in flight when a config change fires,
+// the new panel may slot into the sidebar after this cleanup ran. Tolerable for now.
+function rerenderEverything() {
+  Array.from(openPanels.keys()).forEach((key) => closePanel(key));
+  cleanup();
+  removeFlashStyle();
+  injectFlashStyle();
+  handleCurrentPage(++renderGeneration);
 }
 
 function installEditExitHandlers() {
