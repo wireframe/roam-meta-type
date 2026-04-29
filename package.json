@@ -1,0 +1,19 @@
+{
+  "name": "roam-meta-type",
+  "version": "0.1.0",
+  "description": "Typed pages for Roam Research — a chip next to the title and a sidebar panel for the fields you actually use.",
+  "type": "module",
+  "scripts": {
+    "build": "node bin/build.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "vitest": "^1.6.0"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ryansonnek/roam-meta-type.git"
+  }
+}
