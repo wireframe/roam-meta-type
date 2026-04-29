@@ -207,14 +207,14 @@ Wire `getConfig()` to read a single JSON-encoded `input` setting and parse it. H
   - Add `rerenderEverything()`: closes all open panels, clears chips, re-runs `handleCurrentPage(++renderGeneration)`.
   - Verify: `npm run build` succeeds; manual test in Roam — open Settings → Meta Type tab → confirm the input field appears.
 
-- [ ] **Task 3.5: Verify the round-trip manually.**
+- [x] **Task 3.5: Verify the round-trip manually.**
   - In Roam: open Settings → Meta Type → paste valid JSON for `types[]` (e.g., add a new type "Recipe" with color and fields). Close settings.
   - Confirm: chips on a page tagged `Type:: [[Recipe]]` render with the new color.
   - Paste invalid JSON → confirm defaults restore, no error visible to the user (check console for the parse warning).
   - Clear the setting → confirm defaults active again.
   - Disable the extension → confirm no callbacks fire from the change subscription.
 
-- [ ] **Task 3.6: Commit Phase 3.**
+- [x] **Task 3.6: Commit Phase 3.**
   - Commit message: `Read multi-type config from extensionAPI.settings with JSON-encoded value`
 
 ---
@@ -226,11 +226,11 @@ Replace the JSON-blob `input` with a Blueprint-based React UI that lets users ad
 
 ### Tasks
 
-- [ ] **Task 4.1: Add esbuild as a devDependency.**
+- [x] **Task 4.1: Add esbuild as a devDependency.**
   - Run: `npm install --save-dev esbuild`
   - Verify: `package.json` lists `esbuild` under `devDependencies`; `package-lock.json` exists if it didn't already.
 
-- [ ] **Task 4.2: Replace `bin/build.mjs` with an esbuild-driven build.**
+- [x] **Task 4.2: Replace `bin/build.mjs` with an esbuild-driven build.**
   - File: `bin/build.mjs`
   - Replace the concat logic with an esbuild API call:
     - `entryPoints: ["src/meta-type.js"]`
@@ -247,7 +247,7 @@ Replace the JSON-blob `input` with a Blueprint-based React UI that lets users ad
   - Recommended: write a tiny inline plugin (~20 lines) that resolves each external to a virtual file `export default window.React` / `export const Button = window.Blueprint.Core.Button` etc. Document the chosen approach in a comment at the top of `bin/build.mjs`.
   - Verify: `npm run build` produces `extension.js`. `grep -c "createElement" extension.js` is small (only at user code). `grep "react" extension.js` should not show a bundled React module (confirm with `wc -c extension.js` is well under 200 KB for now).
 
-- [ ] **Task 4.3: Add a smoke test for the build externals.**
+- [x] **Task 4.3: Add a smoke test for the build externals.**
   - File: `test/build-externals.test.mjs` (new)
   - Test that runs the build (or asserts on the existing `extension.js`):
     - `extension.js` exists.
@@ -256,7 +256,7 @@ Replace the JSON-blob `input` with a Blueprint-based React UI that lets users ad
   - This is a lightweight regression guard — if a future change accidentally re-bundles React, this test fails.
   - Verify: build, then `npm test` green.
 
-- [ ] **Task 4.4: Add unit tests for the settings-panel React component (RED).**
+- [x] **Task 4.4: Add unit tests for the settings-panel React component (RED).**
   - File: `test/settings-panel.test.mjs` (new)
   - Use `@testing-library/react` (add as dev dep if needed) or a minimal `react-dom/test-utils` setup. If pulling in testing-library is too heavy, write integration-style assertions against the rendered output of `React.createElement` calls.
   - Test cases:
@@ -267,7 +267,7 @@ Replace the JSON-blob `input` with a Blueprint-based React UI that lets users ad
     - Clicking "Save" calls the `onSave(typesArray)` prop with the current state.
   - Verify: tests fail (no component yet).
 
-- [ ] **Task 4.5: Implement `src/settings-panel.js` (GREEN).**
+- [x] **Task 4.5: Implement `src/settings-panel.js` (GREEN).**
   - File: `src/settings-panel.js` (new)
   - JSX, default export `SettingsPanel({ extensionAPI })` (or a factory accepting `extensionAPI` and returning a component).
   - On mount: read current types from `extensionAPI.settings.get("types-config")`, parse, set local state.
@@ -276,7 +276,7 @@ Replace the JSON-blob `input` with a Blueprint-based React UI that lets users ad
   - Use Blueprint imports: `import { Button, HTMLTable, InputGroup } from "@blueprintjs/core";` — bundler externalizes them.
   - Verify: `npm test` fully green; `npm run build` succeeds.
 
-- [ ] **Task 4.6: Replace the `input` action with a `reactComponent` action.**
+- [x] **Task 4.6: Replace the `input` action with a `reactComponent` action.**
   - File: `src/meta-type.js`
   - In the `panel.create` call from Phase 3, change the single setting from `{ action: { type: "input", ... } }` to `{ action: { type: "reactComponent", component: () => SettingsPanel({ extensionAPI }) } }`.
   - Import `SettingsPanel` from `./settings-panel.js`.

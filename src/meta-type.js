@@ -1,3 +1,8 @@
+import { createTeardownRegistry } from "./teardown-registry.mjs";
+import { chipHtml, fieldRowHtml, renderRoamMarkdown } from "./meta-type-helpers.mjs";
+import { getConfig, getTypeByName, loadConfigFromSettings, SETTINGS_KEY } from "./config.js";
+import SettingsPanel from "./settings-panel.js";
+
 const STYLE_ID = "roam-meta-type-styles";
 const FLASH_STYLE_ID = "roam-meta-type-flash-styles";
 const CHIP_CLASS = "meta-type-chip";
@@ -43,20 +48,30 @@ function registerSettingsPanel(extensionAPI) {
     settings: [
       {
         id: SETTINGS_KEY,
-        name: "Types config (JSON)",
-        description:
-          "JSON config for types, fields, colors, and prefix. See README for shape.",
+        // Roam reserves a left/middle column for `name` and `description`. We
+        // render our own heading inside the React component to claim that
+        // space, so a single space minimizes the wasted column without
+        // tripping any "name must be a non-empty string" guard Roam may have.
+        name: " ",
+        description: "",
         action: {
-          type: "input",
-          onChange: () => handleConfigChange(extensionAPI),
+          type: "reactComponent",
+          component: () =>
+            SettingsPanel({
+              extensionAPI,
+              onSave: () => handleConfigChange(),
+            }),
         },
       },
     ],
   });
 }
 
-function handleConfigChange(extensionAPI) {
-  loadConfigFromSettings(extensionAPI);
+// Called after the settings panel saves. The React component already wrote the
+// new payload via extensionAPI.settings.set AND called setConfig directly, so
+// the in-memory config is current. Re-reading from settings.get here would
+// race with the async write and clobber the fresh in-memory value.
+function handleConfigChange() {
   rerenderEverything();
 }
 
