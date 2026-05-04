@@ -21,9 +21,18 @@ function handleClickOutside(e) {
 }
 
 function handleKeydown(e) {
-  if (e.key !== "Escape") return;
+  // Plain Enter saves and exits edit mode. Without this, Roam's textarea
+  // handler would create a child block (its default for Enter on a block).
+  // Shift/Ctrl/Cmd/Alt+Enter still pass through so users keep Roam's
+  // newline / block-level shortcuts inside the field.
+  const isPlainEnter = e.key === "Enter" && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey;
+  if (e.key !== "Escape" && !isPlainEnter) return;
   const editing = document.querySelector('.meta-type-field[data-editing="true"]');
   if (!editing) return;
+  if (isPlainEnter) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
   exitEditMode(editing);
 }
 
