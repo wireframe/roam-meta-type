@@ -139,7 +139,7 @@ export default function SettingsPanel({ extensionAPI, onSave }) {
   };
 
   return (
-    <div className="bp3-dark" style={{ padding: "8px 0" }}>
+    <div className="bp3-dark" style={{ flex: "0 0 100%", padding: "8px 0" }}>
       <h4 style={{ marginTop: 0, marginBottom: "4px" }}>Types</h4>
       <p style={{ marginTop: 0, marginBottom: "12px", opacity: 0.75 }}>
         Add, remove, and edit the page types this extension recognizes.
