@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { chipHtml, fieldRowHtml, renderRoamMarkdown } from "../src/meta-type-helpers.mjs";
+import { chipHtml, fieldRowHtml } from "../src/meta-type-helpers.mjs";
 
 describe("chipHtml", () => {
   it("returns a span with meta-type-chip class, data-type attribute, and #TypeName text", () => {
@@ -29,7 +29,7 @@ describe("chipHtml", () => {
 });
 
 describe("fieldRowHtml", () => {
-  it("renders a filled value with label, value, and data-block-uid", () => {
+  it("renders a row scaffold with label, empty value cell, and data-block-uid", () => {
     const html = fieldRowHtml({
       label: "Status",
       value: "Doing",
@@ -41,7 +41,8 @@ describe("fieldRowHtml", () => {
     expect(html).toContain('class="meta-type-field-label"');
     expect(html).toContain(">Status<");
     expect(html).toContain('class="meta-type-field-value"');
-    expect(html).toContain("Doing");
+    // Value is populated post-mount via renderString — not in the scaffold.
+    expect(html).not.toContain("Doing");
   });
 
   it("renders an empty value with em-dash and meta-type-empty class", () => {
@@ -65,17 +66,6 @@ describe("fieldRowHtml", () => {
     expect(html).not.toMatch(/data-block-uid="[^"]+"/);
   });
 
-  it("renders [[Page Name]] in the value via renderRoamMarkdown (rm-page-ref)", () => {
-    const html = fieldRowHtml({
-      label: "Topics",
-      value: "[[Acme Corp]]",
-      blockUid: "uid1",
-      isEmpty: false,
-    });
-    expect(html).toContain("rm-page-ref");
-    expect(html).toContain("Acme Corp");
-  });
-
   it("escapes the label text", () => {
     const html = fieldRowHtml({
       label: "A<B>",
@@ -84,74 +74,5 @@ describe("fieldRowHtml", () => {
       isEmpty: false,
     });
     expect(html).toContain("A&lt;B&gt;");
-  });
-});
-
-describe("renderRoamMarkdown", () => {
-  it("html-escapes raw &, <, > in plain text", () => {
-    const out = renderRoamMarkdown("a & b < c > d");
-    expect(out).toContain("&amp;");
-    expect(out).toContain("&lt;");
-    expect(out).toContain("&gt;");
-  });
-
-  it("renders [[Page Name]] as an rm-page-ref span", () => {
-    const out = renderRoamMarkdown("see [[Acme]]");
-    expect(out).toContain('class="rm-page-ref"');
-    expect(out).toContain('data-page="Acme"');
-    expect(out).toContain(">Acme<");
-  });
-
-  it("renders #Tag as an rm-page-ref span with leading #", () => {
-    const out = renderRoamMarkdown("hello #Inbox today");
-    expect(out).toContain('class="rm-page-ref"');
-    expect(out).toContain('data-page="Inbox"');
-    expect(out).toContain(">#Inbox<");
-  });
-
-  it("renders **bold** as <strong>", () => {
-    const out = renderRoamMarkdown("this is **bold** text");
-    expect(out).toContain("<strong>bold</strong>");
-  });
-
-  it("renders __italic__ as <em>", () => {
-    const out = renderRoamMarkdown("this is __italic__ text");
-    expect(out).toContain("<em>italic</em>");
-  });
-
-  it("renders [text](url) as an anchor with target=_blank", () => {
-    const out = renderRoamMarkdown("see [docs](https://example.com)");
-    expect(out).toContain('href="https://example.com"');
-    expect(out).toContain('target="_blank"');
-    expect(out).toContain(">docs</a>");
-  });
-
-  it("auto-links a bare https URL", () => {
-    const out = renderRoamMarkdown("https://example.com/path");
-    expect(out).toContain('href="https://example.com/path"');
-    expect(out).toContain('target="_blank"');
-    expect(out).toContain(">https://example.com/path</a>");
-  });
-
-  it("auto-links a bare http URL", () => {
-    const out = renderRoamMarkdown("http://example.com");
-    expect(out).toContain('href="http://example.com"');
-  });
-
-  it("preserves URL fragments instead of mangling them as hashtags", () => {
-    const out = renderRoamMarkdown("https://example.com/page#section");
-    expect(out).toContain('href="https://example.com/page#section"');
-    expect(out).not.toContain('data-page="section"');
-  });
-
-  it("does not double-link URLs already inside markdown links", () => {
-    const out = renderRoamMarkdown("[docs](https://example.com)");
-    const anchorMatches = out.match(/<a /g) || [];
-    expect(anchorMatches.length).toBe(1);
-  });
-
-  it("stops click propagation on auto-linked URLs so the row does not enter edit mode", () => {
-    const out = renderRoamMarkdown("https://example.com");
-    expect(out).toContain('onclick="event.stopPropagation()"');
   });
 });

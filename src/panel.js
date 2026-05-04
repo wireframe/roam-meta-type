@@ -113,6 +113,10 @@ function renderPanel(pageUid, typeName, fieldData) {
   const rows = panel.querySelectorAll(".meta-type-panel-body .meta-type-field");
   rows.forEach((row, index) => {
     const fieldName = fields[index];
+    const valueCell = row.querySelector(".meta-type-field-value");
+    if (valueCell) {
+      renderValueCell(valueCell, fieldData[fieldName].value);
+    }
     row.addEventListener("click", (e) => {
       // Don't re-trigger edit mode when clicking inside the embedded block editor.
       if (e.target.closest(".meta-type-edit-host")) return;
