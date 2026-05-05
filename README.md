@@ -12,9 +12,9 @@ Roam's freedom as an outline is the whole point. But the people, projects, books
 
 1. Unobtrusive pill-shaped **chip** page identification based on supported `Type::` attribute. Multi-typed pages (`Type:: #Project #Blog`) get one chip per type.
 2. Click a chip → a **panel** mounts at the top of Roam's right sidebar with that type's pinned fields, rendered as label/value rows.
-   ![Sidebar panel for a Project](screenshots/panel-project.png)
+   ![Sidebar panel for a Project](https://raw.githubusercontent.com/wireframe/roam-meta-type/main/screenshots/panel-project.png)
 3. Sidepanel is an integrated **inline-editor**. Click any row → it flips to inline edit mode using Roam's own block editor (autocomplete, page-refs, formatting — all of it). Click any value to flip the row into Roam's block editor. Empty rows render as `—`. Click and the plugin creates the missing block (e.g. `Status:: `) before flipping into edit mode.
-   ![Inline editing a row](screenshots/inline-edit.png)
+   ![Inline editing a row](https://raw.githubusercontent.com/wireframe/roam-meta-type/main/screenshots/inline-edit.png)
 4. Sidepanel reactively refreshes to updates **live**: edit `Priority::` directly in the page body, the panel updates without a re-render.
 5. **Configurable** types, fields, and accent colors via the Roam settings panel (no source edits required).
 
