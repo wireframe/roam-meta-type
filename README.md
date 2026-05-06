@@ -95,6 +95,10 @@ The output `extension.js` is a single ESM file with `export default { onload, on
 
 The extension exports `{ onload({ extensionAPI }), onunload() }`. It also ships an `extension.css` that Roam loads alongside `extension.js` from the extension folder. On load it reads the config from `extensionAPI.settings` (key: `types-config`, JSON-encoded with fallback to baked-in defaults), registers a Blueprint-based settings panel under "Meta Type" using `extensionAPI.settings.panel.create({ action: { type: "reactComponent", ... } })`, installs document-level listeners for click-outside-to-exit-edit and Escape-to-exit-edit, registers a chip-click delegation listener on `document.body`, and starts a `MutationObserver` on `.rm-title-display` for page navigation. Every setup operation registers a corresponding cleanup with a small LIFO teardown registry; on unload everything is reversed in reverse-registration order so the observer is silenced before the DOM is torn down. On navigation, the plugin queries the page's `Type::` attribute, removes any old chips, and renders new ones as siblings of the title element. Clicking a chip opens Roam's right sidebar via `roamAlphaAPI.ui.rightSidebar.open()` and prepends a custom panel `<div>` to `#roam-right-sidebar-content`. Each open panel registers a `roamAlphaAPI.data.addPullWatch` rooted at the page UID; the callback diffs new field values and re-renders affected rows without disturbing rows in edit mode (Roam's block editor, mounted via `roamAlphaAPI.ui.components.renderBlock`, owns that DOM until the user blurs). When the user saves a config change in the settings panel, all open panels close, chips re-mount with the new types/colors, and the flash-color CSS custom properties (`--meta-type-flash-{r,g,b}`) update on `:root` so the keyframes in `extension.css` pick up the new RGB.
 
+## Backlog
+
+See [docs/backlog.md](docs/backlog.md) for planned improvements and future ideas.
+
 ## License
 
 [MIT](LICENSE).
